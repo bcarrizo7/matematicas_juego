@@ -131,6 +131,7 @@
             align-items: center;
             padding: 20px;
             position: relative;
+            gap: 20px;
         }
 
         /* Mini basurero */
@@ -334,6 +335,7 @@
             transform: rotateX(-20deg) rotateY(25deg);
             transition: all 0.3s ease;
             animation: cubeIn 0.6s ease-out;
+            column-gap: 25px;
         }
 
         @keyframes cubeIn {
@@ -358,40 +360,47 @@
         /* Caras del cubo */
         .cube-face {
             position: absolute;
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
-        /* Cara frontal */
+        /* Cara frontal con número */
         .cube-face.front {
-            transform: translateZ(25px);
+            transform: translateZ(30px);
         }
 
         /* Cara trasera */
         .cube-face.back {
-            transform: rotateY(180deg) translateZ(25px);
+            transform: rotateY(180deg) translateZ(30px);
         }
 
         /* Cara superior */
         .cube-face.top {
-            transform: rotateX(90deg) translateZ(25px);
+            transform: rotateX(90deg) translateZ(30px);
         }
 
         /* Cara inferior */
         .cube-face.bottom {
-            transform: rotateX(-90deg) translateZ(25px);
+            transform: rotateX(-90deg) translateZ(30px);
         }
-
+         
         /* Cara derecha */
         .cube-face.right {
-            transform: rotateY(90deg) translateZ(25px);
+            transform: rotateY(90deg) translateZ(30px);
         }
 
         /* Cara izquierda */
         .cube-face.left {
-            transform: rotateY(-90deg) translateZ(25px);
+            transform: rotateY(-90deg) translateZ(30px);
         }
 
         /* Colores para unidades */
@@ -479,11 +488,35 @@
             }
         }
 
+        @keyframes cubeBreakdown {
+            0% {
+                transform: rotateX(-20deg) rotateY(25deg) scale(1);
+                filter: brightness(1);
+            }
+            25% {
+                transform: rotateX(-20deg) rotateY(385deg) scale(1.5);
+                filter: brightness(2) saturate(2);
+            }
+            50% {
+                transform: rotateX(-20deg) rotateY(745deg) scale(1.2);
+                filter: brightness(3) saturate(0);
+            }
+            100% {
+                transform: rotateX(-20deg) rotateY(1105deg) scale(0);
+                opacity: 0;
+            }
+        }
+
         .cube.transforming {
             z-index: 100;
         }
 
         .cube.transformed-new {
+            z-index: 100;
+        }
+
+        .cube.breaking-down {
+            animation: cubeBreakdown 1.2s ease-in-out;
             z-index: 100;
         }
 
@@ -497,6 +530,7 @@
             .cube-face {
                 width: 40px;
                 height: 40px;
+                font-size: 1rem;
             }
             
             .cube-face.front { transform: translateZ(20px); }
@@ -580,6 +614,12 @@
                 width: 60px;
                 height: 60px;
             }
+
+            .cube-face {
+                width: 60px;
+                height: 60px;
+                font-size: 1.4rem;
+            }
         }
 
         @media (min-width: 1024px) {
@@ -636,6 +676,33 @@
             to {
                 opacity: 1;
                 transform: scale(1) translateY(0);
+            }
+        }
+
+        /* Mensaje de transformación */
+        .transform-message {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+            animation: messageIn 0.5s ease-out;
+            z-index: 200;
+        }
+
+        @keyframes messageIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
             }
         }
     </style>
@@ -917,6 +984,88 @@
             }
         }
 
+        function animateBreakdown(type, targetType, count, callback) {
+            const area = document.getElementById('cubesArea');
+            const breakingCubes = cubes.filter(c => c.type === type).slice(0, count);
+            
+            // Mensaje de descomposición
+            const typeLabel = type === 'hundreds' ? 'centena' : 'decena';
+            const targetLabel = targetType === 'tens' ? 'decenas' : 'unidades';
+            const targetCount = type === 'hundreds' ? 10 : 10;
+            
+            showTransformMessage(`Descomponiendo ${count} ${typeLabel}${count > 1 ? 's' : ''} en ${targetLabel}...`);
+            
+            // Animar los cubos que se van a descomponer
+            const cubeElements = area.querySelectorAll(`.cube.${type}`);
+            let animated = 0;
+            
+            cubeElements.forEach((el, i) => {
+                if (i < count) {
+                    setTimeout(() => {
+                        el.classList.add('breaking-down');
+                        playSound(880 - i * 50, 0.2);
+                    }, i * 100);
+                    animated++;
+                }
+            });
+            
+            // Después de la animación, hacer la descomposición real
+            setTimeout(() => {
+                // Eliminar los cubos que se descompusieron
+                breakingCubes.forEach(cube => {
+                    const index = cubes.findIndex(c => c.id === cube.id);
+                    if (index !== -1) cubes.splice(index, 1);
+                });
+                
+                // Agregar los nuevos cubos
+                for (let i = 0; i < count * targetCount; i++) {
+                    cubes.push({
+                        id: cubeId++,
+                        type: targetType,
+                        value: targetType === 'tens' ? 10 : 1
+                    });
+                }
+                
+                // Crear efecto de partículas
+                const rect = area.getBoundingClientRect();
+                createTransformParticles(
+                    rect.left + rect.width / 2,
+                    rect.top + rect.height / 2,
+                    targetType
+                );
+                
+                renderCubes();
+                updateStats();
+                
+                setTimeout(() => {
+                    hideTransformMessage();
+                    callback();
+                }, 1000);
+            }, 1200);
+        }
+
+        function showTransformMessage(text) {
+            const area = document.getElementById('cubesArea');
+            let msg = area.querySelector('.transform-message');
+            
+            if (!msg) {
+                msg = document.createElement('div');
+                msg.className = 'transform-message';
+                area.appendChild(msg);
+            }
+            
+            msg.textContent = text;
+            msg.style.display = 'block';
+        }
+
+        function hideTransformMessage() {
+            const msg = document.querySelector('.transform-message');
+            if (msg) {
+                msg.style.opacity = '0';
+                setTimeout(() => msg.remove(), 300);
+            }
+        }
+
         function removeCube(id) {
             const cube = cubes.find(c => c.id === id);
             if (!cube) return;
@@ -955,6 +1104,12 @@
             const area = document.getElementById('cubesArea');
             area.innerHTML = '';
             
+            // Preservar mensaje de transformación si existe
+            const existingMsg = area.querySelector('.transform-message');
+            if (existingMsg) {
+                area.appendChild(existingMsg);
+            }
+            
             if (cubes.length === 0) {
                 area.innerHTML = '<div class="empty-hint">Toca los botones de abajo para agregar cubos</div>';
                 return;
@@ -977,6 +1132,12 @@
                 faces.forEach(face => {
                     const faceEl = document.createElement('div');
                     faceEl.className = `cube-face ${face}`;
+                    
+                    // Agregar número solo en la cara frontal
+                    if (face === 'front') {
+                        faceEl.textContent = cube.value;
+                    }
+                    
                     cubeEl.appendChild(faceEl);
                 });
                 
@@ -1023,7 +1184,9 @@
                     }
                     result = Math.floor(current / input);
                     opText = `${current} ÷ ${input} = ${result}`;
-                    animateDivide(input, () => rebuildCubes(result));
+                    
+                    // Verificar si necesitamos descomponer cubos para la división
+                    checkAndAnimateDivision(current, input, result);
                     showOperation(opText);
                     return;
             }
@@ -1033,6 +1196,56 @@
             
             playSound(550, 0.2);
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        }
+
+        function checkAndAnimateDivision(total, divisor, result) {
+            const hundreds = cubes.filter(c => c.type === 'hundreds').length;
+            const tens = cubes.filter(c => c.type === 'tens').length;
+            const units = cubes.filter(c => c.type === 'units').length;
+            
+            // Calcular qué necesitamos descomponer
+            let needsBreakdown = false;
+            let breakdownSteps = [];
+            
+            // Si tenemos centenas y no se pueden dividir equitativamente
+            if (hundreds > 0 && hundreds % divisor !== 0) {
+                needsBreakdown = true;
+                const hundredsToBreak = Math.min(hundreds, Math.ceil(hundreds / divisor));
+                breakdownSteps.push({ type: 'hundreds', target: 'tens', count: hundredsToBreak });
+            }
+            
+            // Si después de descomponer centenas, las decenas no se dividen equitativamente
+            const totalTensAfterBreakdown = tens + (breakdownSteps.length > 0 ? breakdownSteps[0].count * 10 : 0);
+            if (totalTensAfterBreakdown > 0 && totalTensAfterBreakdown % divisor !== 0) {
+                needsBreakdown = true;
+                const tensToBreak = Math.min(totalTensAfterBreakdown, Math.ceil(totalTensAfterBreakdown / divisor));
+                breakdownSteps.push({ type: 'tens', target: 'units', count: tensToBreak });
+            }
+            
+            if (needsBreakdown) {
+                // Ejecutar las descomposiciones en secuencia
+                executeBreakdownSequence(breakdownSteps, 0, () => {
+                    // Después de todas las descomposiciones, hacer la división
+                    setTimeout(() => {
+                        animateDivide(divisor, () => rebuildCubes(result));
+                    }, 500);
+                });
+            } else {
+                // Si no necesita descomposición, hacer la división directamente
+                animateDivide(divisor, () => rebuildCubes(result));
+            }
+        }
+
+        function executeBreakdownSequence(steps, index, callback) {
+            if (index >= steps.length) {
+                callback();
+                return;
+            }
+            
+            const step = steps[index];
+            animateBreakdown(step.type, step.target, step.count, () => {
+                executeBreakdownSequence(steps, index + 1, callback);
+            });
         }
 
         function animateMultiply(factor, callback) {
@@ -1058,6 +1271,12 @@
                         faces.forEach(face => {
                             const faceEl = document.createElement('div');
                             faceEl.className = `cube-face ${face}`;
+                            
+                            // Agregar número solo en la cara frontal
+                            if (face === 'front') {
+                                faceEl.textContent = cube.value;
+                            }
+                            
                             cubeEl.appendChild(faceEl);
                         });
                         
@@ -1106,6 +1325,12 @@
                     faces.forEach(face => {
                         const faceEl = document.createElement('div');
                         faceEl.className = `cube-face ${face}`;
+                        
+                        // Agregar número solo en la cara frontal
+                        if (face === 'front') {
+                            faceEl.textContent = cube.value;
+                        }
+                        
                         el.appendChild(faceEl);
                     });
                     
